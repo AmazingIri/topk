@@ -8,9 +8,9 @@ Use 1GB of memory to find the top 100 frequent-appeared URLs in a 100GB file. Ea
 
 
 
-## General Approach 
+## My Approach 
 
-1. Use hash functions to put URLs in the 100 GB **input file** into *f* different **intermideate files** (see below for calculating *f*), to make sure that the same URLs will be in the same file, in the mean time the entire file can be fitted into the memory.
+1. Use hash functions to put URLs in the 100 GB **input file** into *f* different **intermediate files** (see below for calculating *f*), to make sure that the same URLs will be in the same file, in the mean time the entire file can be fitted into the memory.
 2. (Use multi-core here) For each **intermediate file**, use hash map to calculate the appearance count of each URL. For each core, we have a fixed-size min heap as the **intermediate Top-100 URLs**. After processing each file, we traverse the hash map, and update elements in the min heap, so each heap on each core will host the Top-100 URLs of the files this core has processed.
 3. Use multi-merge sort to get the **overall Top-100 URLs** from all the intermediate top 100 URLs.
 
@@ -18,9 +18,9 @@ Use 1GB of memory to find the top 100 frequent-appeared URLs in a 100GB file. Ea
 
 ## 0. Calculate how many files
 
-Step 2 is limited by the memory size, it need to host the intermediate file, the max heap, and the hash map, at the same time.
+Step 2 is limited by the memory size: it need to host the intermediate file, the min heap and the hash map, at the same time.
 
-1. min heap: it always hosts at most 100 elements, so neglectable.
+1. min heap: It hosts at most 100 elements, so neglectable.
 2. hash map: We do not know about the URL count distribution, so it would be hard to estimate how much entries the hash table would have. I would like to assume it takes 15 times the memory of the original dataset. I estimated a high value, because wasting memory seems better than using more memory than we have.
 
 Also, I would like to use multiple cores in this step, therefore each core will handle their own file and have their own hash map.
@@ -34,13 +34,13 @@ For instance, on my computer, *N* = 6:
 
 (one issue here is Linux's default restriction of file descriptors for one application is 1024, so it is best to do`ulimit -u unlimited` before running the experiment.)
 
-According to [Average length of a URL](http://www.supermind.org/blog/740/average-length-of-a-url-part-2), the mean length of a URL is about 77 characters (so 77 bytes in ASCII). So one intermidate file would have around 145,000 URLs. Again, it's hard to do this estimation, if the possible URL distribution is unknown.
+According to [Average length of a URL](http://www.supermind.org/blog/740/average-length-of-a-url-part-2), the mean length of a URL is about 77 characters (so 77 bytes in ASCII). So in general, one intermediate file would have around 145,000 URLs. (In my evaluation, one line is 12.5 bytes on average.) Again, it's hard to do this estimation, if the possible URL distribution is unknown.
 
 
 
-## 1. Spliting files
+## 1. Splitting files
 
-Splitting files using hash function is to gaurantee that the same URL will always be in the same file, so the count of that URL would be correct. Therefore, I used a single thread to split the input file into intermediate files. That proves to be the bottleneck of the whole system.
+Splitting files using hash function is to guarantee that the same URL will always be in the same file, so the count of that URL would be correct. Therefore, I used a single thread to split the input file into intermediate files. That proves to be the bottleneck of the whole system.
 
 Therefore one optimization point would be using multiple threads to do this splitting. Then MapReduce-like structures would be very helpful: the shuffling will feed the reducer with all the intermediate files within that range, so the reducer won't miss some of the counting.
 
@@ -48,7 +48,7 @@ Therefore one optimization point would be using multiple threads to do this spli
 
 ## 2. Counting the Intermediate files
 
-Here, the program will create 1 thread for each core, and binded the thread onto cores. Each core runs a `Counter` , which will get a file from the `\tmp` directory, count the URLs using `unordered_map`, and sees if the URLs goes into the per-core min-heap.
+Here, the program will create one thread for each core, and bind the thread onto core (using `pthread_setaffinity_np()`). Each thread runs a `Counter`, which will get a file from the `\tmp` directory, count the URLs using `unordered_map`, and sees if the URLs goes into the per-core min-heap.
 
 The min-heap here is per-core instead of per-file, which would save a lot of memory. If a URL's count is smaller than the top of min-heap, then it would certainly smaller than all the other elements in the heap.
 
@@ -86,6 +86,6 @@ Because I don't have 200G space on my SSD, and my server in the lab (which do ha
 
 For 1GB:  splitting takes 146 seconds, counting takes 11 seconds, and merging takes 69 **micro**seconds. 
 
-For 10GB: splitting takes 1697 seconds, couting takes 96 seconds, and merging takes 61 **micro**seconds. 
+For 10GB: splitting takes 1697 seconds, counting takes 96 seconds, and merging takes 61 **micro**seconds. 
 
 Due to limited time, I didn't do much optimization on splitting, which should be the real bottleneck here.
