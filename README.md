@@ -8,7 +8,7 @@ Use 1GB of memory to find the top 100 frequent-appeared URLs in a 100GB file. Ea
 
 
 
-##General Approach 
+## General Approach 
 
 1. Use hash functions to put URLs in the 100 GB **input file** into *f* different **intermideate files** (see below for calculating *f*), to make sure that the same URLs will be in the same file, in the mean time the entire file can be fitted into the memory.
 2. (Use multi-core here) For each **intermediate file**, use hash map to calculate the appearance count of each URL. For each core, we have a fixed-size min heap as the **intermediate Top-100 URLs**. After processing each file, we traverse the hash map, and update elements in the min heap, so each heap on each core will host the Top-100 URLs of the files this core has processed.
@@ -16,7 +16,7 @@ Use 1GB of memory to find the top 100 frequent-appeared URLs in a 100GB file. Ea
 
 
 
-##0. Calculate how many files
+## 0. Calculate how many files
 
 Step 2 is limited by the memory size, it need to host the intermediate file, the max heap, and the hash map, at the same time.
 

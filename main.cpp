@@ -136,7 +136,7 @@ int main(int argc, char *argv[]) {
     output_file.open(output_file_name, std::ios::binary);
     for (auto it : results) {
         output_file << it.first.c_str() << " " << it.second << std::endl;
-        printf("%s %lld\n", it.first.c_str(), it.second);
+        // printf("%s %lld\n", it.first.c_str(), it.second);
     }
     output_file.close();
     printf("Results have been output to %s.\n", output_file_name.c_str());    

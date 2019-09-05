@@ -46,7 +46,7 @@ void Counter::Run(void) {
                 }
             }
         }
-        printf("thread %d on core %d counted tmp_%lld.txt \n", id, sched_getcpu(), cur_file_idx);
+        //printf("thread %d on core %d counted tmp_%lld.txt \n", id, sched_getcpu(), cur_file_idx);
         file.close();
     }
 }
